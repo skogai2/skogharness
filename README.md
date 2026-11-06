@@ -143,6 +143,7 @@ In non-harness projects, only CLAUDE.md loads (~4.2K). The orientation hook stay
 | `skills/harness-issue-debug/` | Open a failed feature or a runner-parked Linear issue in a live repair session |
 | `skills/harness-doctor/` | Report-first, idempotent instance health check with an optional `--fix` upgrade mode |
 | `skills/harness-improve/` | Observation-first improvement loop: record a job contract, observe the baseline, one intervention, verify at the claim boundary |
+| `skills/harness-orchestrate/` | herdr worker mode: the lead drives Claude/Codex worker TUIs, one named tab and worktree per feature, and integrates their branches in the harness order |
 | `agents/` | Declarative agent definitions (feature-implementer, layer-implementer, researcher, reviewer, spec-verification, reverification-guard, conformance-tester) |
 | `schemas/` | Data contracts published for external consumers (readiness stamp, park/resolution formats) |
 | `scripts/stamp.sh` | Deterministic file emitter for `/harness-init`, new + upgrade mode |
@@ -174,7 +175,8 @@ vv-harness/                                            # Plugin root
 │   ├── harness-issue-prep/                            # Spec gate: verify, normalize, stamp a spec
 │   ├── harness-issue-debug/                           # Repair loop for failed or runner-parked work
 │   ├── harness-doctor/                                # Report-first instance health check + --fix
-│   └── harness-improve/                               # Observation-first improvement loop for one job
+│   ├── harness-improve/                               # Observation-first improvement loop for one job
+│   └── harness-orchestrate/                           # Drive herdr worker TUIs (one tab each) as the harness lead
 ├── agents/                                            # Declarative agent definitions (spawned as vv-harness:*)
 │   ├── feature-implementer.md                         # Sonnet, scoped TDD on one feature
 │   ├── layer-implementer.md                           # Sonnet, owns one architectural layer

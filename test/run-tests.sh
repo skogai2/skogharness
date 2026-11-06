@@ -89,11 +89,11 @@ make_fixture() {
 # leak through and point these hooks at the real repo instead of the
 # isolated fixture.
 run_session_start() {
-  (cd "$1" && printf '%s' "$2" | CLAUDE_PROJECT_DIR="$1" env -u CLAUDE_PLUGIN_ROOT bash "$HOOKS_DIR/session-start.sh")
+  (cd "$1" && printf '%s' "$2" | CLAUDE_PROJECT_DIR="$1" env -u CLAUDE_PLUGIN_ROOT -u HERDR_ENV -u HERDR_WORKSPACE_ID bash "$HOOKS_DIR/session-start.sh")
 }
 
 run_session_start_with_root() {
-  (cd "$1" && printf '%s' "$2" | CLAUDE_PROJECT_DIR="$1" CLAUDE_PLUGIN_ROOT="$3" bash "$HOOKS_DIR/session-start.sh")
+  (cd "$1" && printf '%s' "$2" | CLAUDE_PROJECT_DIR="$1" CLAUDE_PLUGIN_ROOT="$3" env -u HERDR_ENV -u HERDR_WORKSPACE_ID bash "$HOOKS_DIR/session-start.sh")
 }
 
 run_session_end() {
@@ -779,7 +779,7 @@ print(json.dumps({
 }))
 ')
 OUT=$(cd "$DIR_SID" && printf '%s' "$INJECT_JSON" \
-  | CLAUDE_PROJECT_DIR="$DIR_SID" env -u CLAUDE_PLUGIN_ROOT bash "$HOOKS_DIR/session-start.sh")
+  | CLAUDE_PROJECT_DIR="$DIR_SID" env -u CLAUDE_PLUGIN_ROOT -u HERDR_ENV -u HERDR_WORKSPACE_ID bash "$HOOKS_DIR/session-start.sh")
 RC=$?
 assert_rc0 "$RC" "sid: a newline-bearing session_id exits 0"
 INJECT_LINES=$(printf '%s\n' "$OUT" | wc -l | tr -d ' ')
@@ -8139,6 +8139,32 @@ assert_deny_json "$OUT" "cg (F054): non-exempted path denial uses JSON deny form
 assert_contains "$OUT" "secret-assignment" \
   "cg (F054): non-exempted path denial names secret-assignment"
 
+# The gate parses `git diff --cached` output, so the user's diff config must not
+# change its shape. diff.mnemonicPrefix rewrites the new-side header to "+++ i/x",
+# diff.noprefix drops the prefix, color.diff=always adds escape codes -- each made
+# the exemption above silently miss (found on a machine with mnemonicPrefix set in
+# ~/.config/git/config). Forced here via GIT_CONFIG_* so the check is
+# deterministic on every machine, not just ones carrying that config.
+run_commit_gate_diffcfg() {
+  DIR="$1"; CMD="$2"; KEY="$3"; VAL="$4"
+  (cd "$DIR" && printf '%s' "$(bash_command_json "$CMD")" \
+    | GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="$KEY" GIT_CONFIG_VALUE_0="$VAL" \
+      CLAUDE_PROJECT_DIR="$DIR" "$DIR/.claude/hooks/commit-gate.sh")
+}
+git -C "$DIR_CG_EXEMPTCFG" reset -q other.py
+for CFG in "diff.mnemonicPrefix true" "diff.noprefix true" "color.diff always"; do
+  set -- $CFG
+  OUT=$(run_commit_gate_diffcfg "$DIR_CG_EXEMPTCFG" 'git commit -m "add fixtures"' "$1" "$2")
+  RC=$?
+  assert_rc0 "$RC" "cg (diffcfg $1=$2): exempt path exits 0"
+  assert_not_contains "$OUT" "permissionDecision" \
+    "cg (diffcfg $1=$2): configured exempt path still has no deny fields"
+done
+git -C "$DIR_CG_EXEMPTCFG" add other.py
+OUT=$(run_commit_gate_diffcfg "$DIR_CG_EXEMPTCFG" 'git commit -m "add other"' diff.mnemonicPrefix true)
+assert_contains "$OUT" "at other.py:1" \
+  "cg (diffcfg): a denial under diff.mnemonicPrefix names the real path, not i/other.py"
+
 DIR_CG_STYLEOFF="$WORK/commit-gate-style-off"
 make_fixture "$DIR_CG_STYLEOFF"
 install_hooks "$DIR_CG_STYLEOFF"
@@ -10178,6 +10204,7 @@ RC_YML="$REPO_ROOT/.github/workflows/release-consistency.yml"
 if [ -f "$RC_YML" ]; then
   RC_YML_ERRORS=$(python3 - "$RC_YML" 2>&1 <<'PYEOF'
 import sys
+import re
 
 path = sys.argv[1]
 text = open(path).read()
@@ -10210,9 +10237,13 @@ try:
         }
         if not isinstance(push, dict) or not required_paths.issubset(set(push.get("paths") or [])):
             errors.append("'on.push.paths' does not cover every release-consistency input")
-        if not isinstance(on, dict) or "schedule" not in on:
+        # A deliberate disable is allowed only when the file says so AND names
+        # the event that re-enables it (AGENTS.md: a workaround must carry its
+        # retirement condition) -- never a silent comment-out.
+        disabled_marked = bool(re.search(r"(?m)^\s*# DISABLED \(", text)) and "Re-enable" in text
+        if (not isinstance(on, dict) or "schedule" not in on) and not disabled_marked:
             errors.append("'on.schedule' is missing (the bumped-but-never-tagged catch)")
-        if not isinstance(on, dict) or "workflow_dispatch" not in on:
+        if (not isinstance(on, dict) or "workflow_dispatch" not in on) and not disabled_marked:
             errors.append("'on.workflow_dispatch' is missing")
         jobs = data.get("jobs") if isinstance(data, dict) else None
         if not isinstance(jobs, dict) or not jobs:
@@ -10270,7 +10301,9 @@ except ImportError:
     ):
         if f"- '{required_path}'" not in text:
             errors.append(f"push path filter is missing {required_path} (structural check)")
-    if "schedule:" not in text:
+    live_schedule = re.search(r"(?m)^  schedule:", text)
+    marked = re.search(r"(?m)^\s*# DISABLED \(", text) and "Re-enable" in text
+    if not live_schedule and not marked:
         errors.append("no schedule trigger found (structural check)")
     if "checked_tag" not in text:
         errors.append("no checked_tag gate found (structural check)")
@@ -10320,10 +10353,13 @@ PYEOF
   fi
   # The genuine bumped-but-never-tagged case still gets caught, just not by the
   # run that structurally cannot see the tag.
-  if grep -q "schedule:" "$RC_YML" && grep -qE "tags: \['v\*'\]" "$RC_YML"; then
+  if grep -qE "^  schedule:" "$RC_YML" && grep -qE "tags: \['v\*'\]" "$RC_YML"; then
     pass "rc: the full check still runs where a tag can exist (tag push + schedule)"
+  elif grep -qE "^ *# DISABLED \(" "$RC_YML" && grep -q "Re-enable" "$RC_YML" \
+    && grep -qE "tags: \['v\*'\]" "$RC_YML"; then
+    pass "rc: schedule deliberately disabled with a stated re-enable condition; tag push still carries the tag assertion"
   else
-    fail "rc: no tag-push or schedule trigger to carry the tag assertion"
+    fail "rc: no tag-push or schedule trigger to carry the tag assertion (a disable needs '# DISABLED (' plus a Re-enable condition)"
   fi
   # Self-healing: nine issues were closed by hand on 2026-08-14 because nothing
   # in this workflow ever closed one.
@@ -13143,6 +13179,34 @@ if [ -n "$P4_ANNOT_LINE" ] && [ -n "$P4_CAPTURE_LINE" ] \
   pass "p4: orientation-recovery.md annotates the capture as historical pre-v6, above the capture"
 else
   fail "p4: orientation-recovery.md is missing a pre-v6 annotation above the capture"
+fi
+
+# herdr: session-start advertises herdr worker orchestration ONLY when the session
+# runs inside a herdr-managed pane (HERDR_ENV=1, which herdr injects into every
+# pane). Env-only detection: the hook must never call the herdr CLI (no socket
+# round-trip at session start). The line lives in the footer so truncation of the
+# body can never drop it.
+DIR_HERDR="$WORK/herdr-env"
+make_fixture "$DIR_HERDR"
+OUT=$( (cd "$DIR_HERDR" && printf '%s' '{"source":"startup"}' | CLAUDE_PROJECT_DIR="$DIR_HERDR" HERDR_ENV=1 HERDR_WORKSPACE_ID=w7 env -u CLAUDE_PLUGIN_ROOT bash "$HOOKS_DIR/session-start.sh") )
+RC=$?
+assert_rc0 "$RC" "herdr: session-start exits 0 inside herdr"
+assert_contains "$OUT" "herdr: inside herdr workspace w7" \
+  "herdr: orientation names the herdr workspace when HERDR_ENV=1"
+assert_contains "$OUT" "harness-continue Step 4" \
+  "herdr: the herdr line routes to harness-continue's mode choice"
+OUT=$(run_session_start "$DIR_HERDR" '{"source":"startup"}')
+assert_not_contains "$OUT" "herdr: inside herdr" \
+  "herdr: no herdr line when HERDR_ENV is unset"
+OUT=$( (cd "$DIR_HERDR" && printf '%s' '{"source":"startup"}' | CLAUDE_PROJECT_DIR="$DIR_HERDR" HERDR_ENV=0 env -u CLAUDE_PLUGIN_ROOT bash "$HOOKS_DIR/session-start.sh") )
+assert_not_contains "$OUT" "herdr: inside herdr" \
+  "herdr: no herdr line when HERDR_ENV is anything but 1"
+# Command position only (line start, $( , backtick, or after ; & |), optionally via
+# the rtk wrapper -- the advertised line itself says "herdr workspace" inside an echo.
+if grep -Eq '(^[[:space:]]*|\$\(|`|[;&|][[:space:]]*)(rtk[[:space:]]+)?herdr[[:space:]]' "$HOOKS_DIR/session-start.sh"; then
+  fail "herdr: session-start.sh must not invoke the herdr CLI"
+else
+  pass "herdr: session-start.sh detects herdr from the environment only"
 fi
 
 echo ""
