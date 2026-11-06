@@ -8139,6 +8139,32 @@ assert_deny_json "$OUT" "cg (F054): non-exempted path denial uses JSON deny form
 assert_contains "$OUT" "secret-assignment" \
   "cg (F054): non-exempted path denial names secret-assignment"
 
+# The gate parses `git diff --cached` output, so the user's diff config must not
+# change its shape. diff.mnemonicPrefix rewrites the new-side header to "+++ i/x",
+# diff.noprefix drops the prefix, color.diff=always adds escape codes -- each made
+# the exemption above silently miss (found on a machine with mnemonicPrefix set in
+# ~/.config/git/config). Forced here via GIT_CONFIG_* so the check is
+# deterministic on every machine, not just ones carrying that config.
+run_commit_gate_diffcfg() {
+  DIR="$1"; CMD="$2"; KEY="$3"; VAL="$4"
+  (cd "$DIR" && printf '%s' "$(bash_command_json "$CMD")" \
+    | GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="$KEY" GIT_CONFIG_VALUE_0="$VAL" \
+      CLAUDE_PROJECT_DIR="$DIR" "$DIR/.claude/hooks/commit-gate.sh")
+}
+git -C "$DIR_CG_EXEMPTCFG" reset -q other.py
+for CFG in "diff.mnemonicPrefix true" "diff.noprefix true" "color.diff always"; do
+  set -- $CFG
+  OUT=$(run_commit_gate_diffcfg "$DIR_CG_EXEMPTCFG" 'git commit -m "add fixtures"' "$1" "$2")
+  RC=$?
+  assert_rc0 "$RC" "cg (diffcfg $1=$2): exempt path exits 0"
+  assert_not_contains "$OUT" "permissionDecision" \
+    "cg (diffcfg $1=$2): configured exempt path still has no deny fields"
+done
+git -C "$DIR_CG_EXEMPTCFG" add other.py
+OUT=$(run_commit_gate_diffcfg "$DIR_CG_EXEMPTCFG" 'git commit -m "add other"' diff.mnemonicPrefix true)
+assert_contains "$OUT" "at other.py:1" \
+  "cg (diffcfg): a denial under diff.mnemonicPrefix names the real path, not i/other.py"
+
 DIR_CG_STYLEOFF="$WORK/commit-gate-style-off"
 make_fixture "$DIR_CG_STYLEOFF"
 install_hooks "$DIR_CG_STYLEOFF"

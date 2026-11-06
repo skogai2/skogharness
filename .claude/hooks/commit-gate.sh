@@ -1148,7 +1148,11 @@ def check_compound_stage_and_commit(parsed):
 def staged_diff(project_root):
     timeout = float(os.environ.get("COMMIT_GATE_DIFF_TIMEOUT", "5"))
     result = subprocess.run(
-        ["git", "diff", "--cached", "-U0"],
+        # Pin the output shape: the parser below expects "+++ b/<path>" and no
+        # escape codes, and user config (diff.mnemonicPrefix, diff.noprefix,
+        # color.diff=always, diff.external) can change all of that.
+        ["git", "diff", "--cached", "-U0", "--no-color", "--no-ext-diff",
+         "--src-prefix=a/", "--dst-prefix=b/"],
         cwd=project_root,
         capture_output=True,
         text=True,
