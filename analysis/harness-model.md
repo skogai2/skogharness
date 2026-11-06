@@ -219,10 +219,28 @@ verified independent features win over single-session even when each touches few
 Mechanism: the lead launches `/vv-harness:implement-features` — one implementer per
 feature in an isolated worktree, then a reviewer per feature, returning structured
 per-feature results the lead integrates. The lead never edits feature code in this mode
-(`skills/harness-continue/SKILL.md:263-268`). Availability is probed by capability;
+(`skills/harness-continue/SKILL.md:278-281`). Availability is probed by capability;
 when the `Workflow` tool is unavailable the documented fallback is plain
 worktree-isolated subagents using the same `vv-harness:*` agent types — *do not abort
 parallel work* (`skills/harness-continue/SKILL.md:128-147`).
+
+**herdr worker mode** is a third, opt-in option that exists only inside herdr: herdr
+injects `HERDR_ENV=1` into every pane it manages, and session-start then prints a
+`herdr: inside herdr workspace …` footer line advertising the mode — detection is
+env-only, with no herdr CLI call (`hooks/session-start.sh:414-420`). harness-continue
+offers it only when that line was printed, under the same batch rule as workflow mode,
+and never picks it silently over workflow mode; it is launched through
+`/vv-harness:harness-orchestrate` (`skills/harness-continue/SKILL.md:149-170`). Each
+worker TUI owns its own named herdr tab (`skills/harness-orchestrate/SKILL.md:21-30`),
+and in a harness project the controller is the vv-harness lead, with batch selection,
+packet contents and integration order fixed by `references/harness-mode.md`
+(`skills/harness-orchestrate/SKILL.md:243-249`). Each feature gets one herdr worktree
+pinned to the recorded base (`skills/harness-orchestrate/references/harness-mode.md:20-44`);
+workers are told never to touch `features.json` or other lead-owned state, merge, or
+change feature status (`skills/harness-orchestrate/references/harness-mode.md:52-62`),
+and the lead integrates one feature at a time — scope-diff, merge, `features.json`
+update, then the TaskCompleted and commit gates
+(`skills/harness-orchestrate/references/harness-mode.md:70-94`).
 
 **When not to** (`README.md:117-120`, `rules/parallel-work.md:21-26`): only one feature
 ready; work is sequential; orchestration overhead exceeds the benefit; features touch
