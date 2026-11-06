@@ -411,6 +411,13 @@ if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
   echo "TDD process: $CLAUDE_PLUGIN_ROOT/rules/tdd.md (read before implementing a feature or bugfix)."
 fi
 echo "Run /harness-continue for the full interactive flow (mode choice, smoke test, team plan)."
+# herdr injects HERDR_ENV=1 into every pane it manages. Detection is env-only on
+# purpose: no herdr CLI round-trip at session start (the herdr skill itself
+# makes this check the gate for any control command).
+if [ "${HERDR_ENV:-}" = "1" ]; then
+  echo "herdr: inside herdr workspace ${HERDR_WORKSPACE_ID:-unknown} -- herdr worker mode" \
+    "(/vv-harness:harness-orchestrate) is available; see harness-continue Step 4."
+fi
 )
 
 # The body is capped at what the 9800-char total leaves after the footer and a

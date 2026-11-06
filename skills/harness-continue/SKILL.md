@@ -146,12 +146,25 @@ behavior for subagents. Sequencing stays with the lead: it merges the worktree
 branches at synthesis and spawns dependent work only after its prerequisites are
 merged.
 
+**herdr worker mode (opt-in, only inside herdr):**
+
+Offered only when the orientation printed a `herdr: inside herdr workspace …` line
+(session-start prints it when `HERDR_ENV=1`; outside herdr the mode does not exist).
+Same batch rule as workflow mode — two or more verified, independent features — but
+each feature goes to an interactive Claude or Codex worker TUI in its own herdr tab and
+worktree instead of a workflow subagent. Prefer it when the user wants to watch or step
+into workers, mix runtimes, or have each worker run under the project's own hooks.
+Never pick it silently over workflow mode: offer it, and launch it through
+`/vv-harness:harness-orchestrate`, whose `references/harness-mode.md` fixes batch
+selection, packet contents, and the integration order (identical to Step 5b step 4).
+
 Ask the user if it's ambiguous:
 
 ```
 I see [N] verified features ready. I can either:
 1. Work on F00X in a focused single session
 2. Launch the implement-features workflow on F00X and F00Y in parallel
+3. (inside herdr only) Run F00X and F00Y as herdr worker tabs via /vv-harness:harness-orchestrate
 
 Which do you prefer?
 ```

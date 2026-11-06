@@ -89,11 +89,11 @@ make_fixture() {
 # leak through and point these hooks at the real repo instead of the
 # isolated fixture.
 run_session_start() {
-  (cd "$1" && printf '%s' "$2" | CLAUDE_PROJECT_DIR="$1" env -u CLAUDE_PLUGIN_ROOT bash "$HOOKS_DIR/session-start.sh")
+  (cd "$1" && printf '%s' "$2" | CLAUDE_PROJECT_DIR="$1" env -u CLAUDE_PLUGIN_ROOT -u HERDR_ENV -u HERDR_WORKSPACE_ID bash "$HOOKS_DIR/session-start.sh")
 }
 
 run_session_start_with_root() {
-  (cd "$1" && printf '%s' "$2" | CLAUDE_PROJECT_DIR="$1" CLAUDE_PLUGIN_ROOT="$3" bash "$HOOKS_DIR/session-start.sh")
+  (cd "$1" && printf '%s' "$2" | CLAUDE_PROJECT_DIR="$1" CLAUDE_PLUGIN_ROOT="$3" env -u HERDR_ENV -u HERDR_WORKSPACE_ID bash "$HOOKS_DIR/session-start.sh")
 }
 
 run_session_end() {
@@ -779,7 +779,7 @@ print(json.dumps({
 }))
 ')
 OUT=$(cd "$DIR_SID" && printf '%s' "$INJECT_JSON" \
-  | CLAUDE_PROJECT_DIR="$DIR_SID" env -u CLAUDE_PLUGIN_ROOT bash "$HOOKS_DIR/session-start.sh")
+  | CLAUDE_PROJECT_DIR="$DIR_SID" env -u CLAUDE_PLUGIN_ROOT -u HERDR_ENV -u HERDR_WORKSPACE_ID bash "$HOOKS_DIR/session-start.sh")
 RC=$?
 assert_rc0 "$RC" "sid: a newline-bearing session_id exits 0"
 INJECT_LINES=$(printf '%s\n' "$OUT" | wc -l | tr -d ' ')
@@ -13143,6 +13143,34 @@ if [ -n "$P4_ANNOT_LINE" ] && [ -n "$P4_CAPTURE_LINE" ] \
   pass "p4: orientation-recovery.md annotates the capture as historical pre-v6, above the capture"
 else
   fail "p4: orientation-recovery.md is missing a pre-v6 annotation above the capture"
+fi
+
+# herdr: session-start advertises herdr worker orchestration ONLY when the session
+# runs inside a herdr-managed pane (HERDR_ENV=1, which herdr injects into every
+# pane). Env-only detection: the hook must never call the herdr CLI (no socket
+# round-trip at session start). The line lives in the footer so truncation of the
+# body can never drop it.
+DIR_HERDR="$WORK/herdr-env"
+make_fixture "$DIR_HERDR"
+OUT=$( (cd "$DIR_HERDR" && printf '%s' '{"source":"startup"}' | CLAUDE_PROJECT_DIR="$DIR_HERDR" HERDR_ENV=1 HERDR_WORKSPACE_ID=w7 env -u CLAUDE_PLUGIN_ROOT bash "$HOOKS_DIR/session-start.sh") )
+RC=$?
+assert_rc0 "$RC" "herdr: session-start exits 0 inside herdr"
+assert_contains "$OUT" "herdr: inside herdr workspace w7" \
+  "herdr: orientation names the herdr workspace when HERDR_ENV=1"
+assert_contains "$OUT" "harness-continue Step 4" \
+  "herdr: the herdr line routes to harness-continue's mode choice"
+OUT=$(run_session_start "$DIR_HERDR" '{"source":"startup"}')
+assert_not_contains "$OUT" "herdr: inside herdr" \
+  "herdr: no herdr line when HERDR_ENV is unset"
+OUT=$( (cd "$DIR_HERDR" && printf '%s' '{"source":"startup"}' | CLAUDE_PROJECT_DIR="$DIR_HERDR" HERDR_ENV=0 env -u CLAUDE_PLUGIN_ROOT bash "$HOOKS_DIR/session-start.sh") )
+assert_not_contains "$OUT" "herdr: inside herdr" \
+  "herdr: no herdr line when HERDR_ENV is anything but 1"
+# Command position only (line start, $( , backtick, or after ; & |), optionally via
+# the rtk wrapper -- the advertised line itself says "herdr workspace" inside an echo.
+if grep -Eq '(^[[:space:]]*|\$\(|`|[;&|][[:space:]]*)(rtk[[:space:]]+)?herdr[[:space:]]' "$HOOKS_DIR/session-start.sh"; then
+  fail "herdr: session-start.sh must not invoke the herdr CLI"
+else
+  pass "herdr: session-start.sh detects herdr from the environment only"
 fi
 
 echo ""
