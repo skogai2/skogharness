@@ -4,9 +4,9 @@
   "created": "2026-07-22",
   "harness": "vv-harness",
   "git_identity": {
-    "user_name": "Ovidiu Eftimie",
-    "user_email": "eovidiu@gmail.com",
-    "ssh_key": "none (SSH unavailable; HTTPS via gh credential helper, account eovidiu)",
+    "user_name": "Emil Skogsund",
+    "user_email": "emil@skogsund.se",
+    "ssh_key": "none (HTTPS remote origin skogai2/skogharness)",
     "ssh_host": "github.com"
   },
   "team_structure": null,
