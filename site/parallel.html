@@ -70,7 +70,7 @@
     <h2>Choosing the mode</h2>
   </div>
 
-  <div class="grid grid-2" style="margin-bottom: 1.6rem;">
+  <div class="grid grid-3" style="margin-bottom: 1.6rem;">
     <div class="card">
       <h3>Single-session</h3>
       <p>
@@ -86,6 +86,17 @@
         lead launches <code>/vv-harness:implement-features</code>: one implementer per
         feature in an isolated worktree, then a reviewer per feature, returning structured
         per-feature results the lead integrates.
+      </p>
+    </div>
+    <div class="card">
+      <h3>herdr worker mode</h3>
+      <p>
+        Opt-in, and offered only when the session runs inside
+        <a href="https://herdr.dev">herdr</a>: herdr sets <code>HERDR_ENV=1</code> and the
+        session-start footer advertises the mode. Same batch rule as workflow mode, run
+        via <code>/vv-harness:harness-orchestrate</code>: one interactive worker TUI per
+        named herdr tab, each in its own herdr worktree. The lead keeps
+        <code>features.json</code>, integration and the gates.
       </p>
     </div>
   </div>

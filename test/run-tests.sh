@@ -13209,6 +13209,16 @@ else
   pass "herdr: session-start.sh detects herdr from the environment only"
 fi
 
+# F125: the field guide and its analysis notes document herdr worker mode.
+PARALLEL_HTML=$(cat "$REPO_ROOT/site/parallel.html")
+assert_contains "$PARALLEL_HTML" "harness-orchestrate" \
+  "herdr docs: site/parallel.html names /vv-harness:harness-orchestrate"
+assert_contains "$PARALLEL_HTML" "HERDR_ENV" \
+  "herdr docs: site/parallel.html names the HERDR_ENV gate"
+MODEL_S8=$(awk '/^## 8\./{on=1} /^## 9\./{on=0} on' "$REPO_ROOT/analysis/harness-model.md")
+assert_contains "$MODEL_S8" "herdr" \
+  "herdr docs: analysis/harness-model.md section 8 covers herdr worker mode"
+
 echo ""
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo "Summary: $PASS_COUNT/$TOTAL assertions passed, $FAIL_COUNT failed"
