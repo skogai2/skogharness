@@ -2,6 +2,24 @@
 
 Version history for the VV Claude Code Harness. The current version lives in `.claude-plugin/plugin.json`.
 
+### v6.3.1 (2026-11-06)
+
+Corrections to herdr worker mode from its first live run (F125), plus docs.
+
+1. **Changed: worker retirement in `harness-orchestrate`.** `herdr worktree
+   remove --workspace` deletes the whole worktree workspace, including its tab
+   and the worker TUI, so the separate `tab close` step is gone from
+   `references/harness-mode.md`. Record the worker's screen before removing,
+   and compare `herdr workspace list` before and after.
+2. **Changed: worker tab placement.** `worktree create` already opens a root
+   tab and pane; rename that tab and start the worker there instead of creating
+   a second tab.
+3. **Added: manager-pane shell notes.** Wrap manager-pane commands in
+   `bash -c` (the user's shell may be fish), and never `wait-output --match` on
+   text that also appears in the echoed command.
+4. **Docs:** `site/parallel.html` gains a third mode card for herdr worker mode,
+   and `analysis/harness-model.md` section 8 describes it with cited sources.
+
 ### v6.3.0 (2026-11-06)
 
 herdr worker mode: a third way to run parallel work, available only when the
