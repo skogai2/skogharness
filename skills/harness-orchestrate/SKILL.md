@@ -53,6 +53,12 @@ caller pane is already too small to split usefully, skip the manager pane and
 run those commands from a tab labeled `manager` instead. close the manager pane
 when the orchestration is complete.
 
+the manager pane runs the user's login shell, which may not be bash (fish
+rejects `$?`): wrap every command as `bash -c '…'`. when waiting on its output, match text the command prints, never
+text that also appears in the echoed command line — `pane wait-output --match
+DONE` returns at once on `…; echo DONE`. prefer a `--regex` on the result shape
+(`--regex "Summary: [0-9]"`).
+
 two names per worker, both required at launch:
 
 - **tab label** — `<model>: <slice>`, e.g. `opus: fix loops`,
@@ -252,8 +258,16 @@ rtk herdr worktree create --workspace "$HERDR_WORKSPACE_ID" \
   --branch <slug> --label "<slug>" --no-focus --json
 ```
 
-create the worker's tab inside that workspace (`tab create --workspace
-<worktree_workspace_id>`) so its cwd is the isolated checkout.
+`worktree create` already opens that workspace with one root tab and pane
+(`.result.tab.tab_id`, `.result.root_pane.pane_id`), cwd the isolated checkout:
+rename that tab to the worker's label and start the worker in its root pane
+instead of creating a second tab.
+
+`herdr worktree remove --workspace <worktree_workspace_id>` deletes the whole
+worktree workspace — its tabs and any worker tui in them, not just the checkout
+(seen live, herdr 0.9.5, 2026-11-06). so a worktree worker needs no separate
+`tab close`, but record its screen first. run `rtk herdr workspace list` before
+and after the remove, and confirm only that one workspace disappeared.
 
 ## track workers
 

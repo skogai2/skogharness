@@ -234,13 +234,13 @@ and never picks it silently over workflow mode; it is launched through
 worker TUI owns its own named herdr tab (`skills/harness-orchestrate/SKILL.md:21-30`),
 and in a harness project the controller is the vv-harness lead, with batch selection,
 packet contents and integration order fixed by `references/harness-mode.md`
-(`skills/harness-orchestrate/SKILL.md:237-243`). Each feature gets one herdr worktree
+(`skills/harness-orchestrate/SKILL.md:243-249`). Each feature gets one herdr worktree
 pinned to the recorded base (`skills/harness-orchestrate/references/harness-mode.md:20-44`);
 workers are told never to touch `features.json` or other lead-owned state, merge, or
 change feature status (`skills/harness-orchestrate/references/harness-mode.md:52-62`),
 and the lead integrates one feature at a time — scope-diff, merge, `features.json`
 update, then the TaskCompleted and commit gates
-(`skills/harness-orchestrate/references/harness-mode.md:70-91`).
+(`skills/harness-orchestrate/references/harness-mode.md:70-94`).
 
 **When not to** (`README.md:117-120`, `rules/parallel-work.md:21-26`): only one feature
 ready; work is sequential; orchestration overhead exceeds the benefit; features touch
