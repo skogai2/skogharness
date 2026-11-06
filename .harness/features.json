@@ -3631,13 +3631,14 @@
       "risk": "standard",
       "require_plan_approval": false,
       "correction_cycles": 0,
-      "scope_expansions": 0,
+      "scope_expansions": [],
       "approaches_tried": [
         "Diffed the two copies: skogai had F003 plan-mode findings, harness had F124/F125 fixes; took skogai plan-mode.md, kept harness SKILL.md, ported the agent_not_ready plan-menu case",
         "Kept the harness wait (plain agent wait = idle|done|blocked per herdr 0.9.5 --help) over skogai's two sequential waits; fixed plan-mode's done-only wait to the same form",
         "Dropped references/herdr.md: identical to `herdr --skill` output except a trailing newline, so it would only drift",
         "Verified flags live: claude --model, codex -m/--model, herdr worktree create --base, herdr pane split [PANE_ID]"
-      ]
+      ],
+      "notes": "Discovered while preparing the skogai rename from the F125 handoff: the two skill copies had diverged both ways. skogai copy retired in skogai2/skogai#13."
     }
   ]
 }

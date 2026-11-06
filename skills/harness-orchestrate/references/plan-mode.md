@@ -98,7 +98,7 @@ Claude has written up a plan and is ready to execute. Would you like to proceed?
   2. Yes, manually approve edits
   3. Tell Claude what to change
      shift+tab to approve with this feedback
-ctrl+g to edit in Nvim · /skogai/claude/plans/<slug>.md
+ctrl+g to edit in Nvim · $CLAUDE_CONFIG_DIR/plans/<slug>.md
 ```
 
 Catch it with `herdr pane wait-output <pane_id> --match "Would you like to
@@ -116,9 +116,16 @@ herdr agent send-keys fix-loops enter
 
 Confirm via `agent read` that the status line shows `auto mode on` and the
 worker is working (`agent get <name>` → `working`). If it is not in auto mode
-after acceptance, stop and report — never switch to bypass. To
-reject and keep planning, select the "keep planning" option and send feedback
-via `agent prompt`.
+after acceptance, stop and report — never switch to bypass.
+
+To reject and keep planning, select option **3, Tell Claude what to change**
+(press `down` twice from option 1). It opens a feedback field in the menu
+itself, so type the feedback with `herdr pane send-text <pane_id> "<feedback>"`
+and submit with `agent send-keys <name> enter` (send-keys takes key names
+only, never text). Do not use shift+tab there:
+it approves the plan together with the feedback. Read the screen afterwards.
+The worker should be back in plan mode, revising. This path was not exercised
+in F003, so verify the field on first use.
 
 ## Codex: launch and enter Plan mode
 
