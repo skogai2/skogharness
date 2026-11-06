@@ -107,6 +107,10 @@ Use workflow mode when two or more independent, spec-verified features are ready
 
 The `TaskCompleted` hook mechanically enforces passing tests before any mirrored task can be marked complete, and the commit gate fires in the lead session at integration.
 
+### Parallel work inside herdr (herdr worker mode)
+
+When the session runs inside a [herdr](https://herdr.dev) pane (`HERDR_ENV=1`), the SessionStart orientation adds a `herdr: inside herdr workspace …` line and `/harness-continue` Step 4 offers a third option: `/vv-harness:harness-orchestrate`. The same batch rule applies (two or more verified, independent features), but each feature goes to an interactive Claude or Codex worker in its own named herdr tab and worktree, with one manager pane beside you for test runs and a live worker board. Workers are full sessions, so the project's own hooks fire inside each one; the lead still owns `features.json` and integrates in the standard order. Use it when you want to watch or step into workers, or mix runtimes. Outside herdr the mode does not exist. Details: `skills/harness-orchestrate/references/harness-mode.md`.
+
 **Optional dual-engine review (F018/OVI-66)**: configure `.harness/harness.json`'s
 `review.second_engine: "codex"` to have the lead run a Codex CLI review in parallel
 with — and blind to — the Claude reviewer's own review. Absent the config, or absent

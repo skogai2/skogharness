@@ -2,6 +2,39 @@
 
 Version history for the VV Claude Code Harness. The current version lives in `.claude-plugin/plugin.json`.
 
+### v6.3.0 (2026-11-06)
+
+herdr worker mode: a third way to run parallel work, available only when the
+session runs inside a herdr pane. Plus a commit-gate fix
+for users whose git config changes the shape of `git diff`.
+
+1. **Added: herdr worker mode.** `hooks/session-start.sh` prints
+   `herdr: inside herdr workspace <id>` in the orientation footer when
+   `HERDR_ENV=1`. Detection reads the environment only and never calls the herdr
+   CLI. `harness-continue` Step 4 offers the mode only when that line is
+   present, and never chooses it silently over workflow mode.
+2. **Added: `skills/harness-orchestrate`** (`/vv-harness:harness-orchestrate`,
+   user-invoked only). A controller drives interactive Claude/Codex worker TUIs:
+   one named tab and one worktree per worker, plus one manager pane beside the
+   caller for test runs and a live worker board. In a harness project,
+   `references/harness-mode.md` fixes the batch (verified, undrifted, unblocked,
+   non-overlapping scope), builds each worker's packet verbatim from
+   `description`/`scope`/`depends_on`, and keeps the standard integration order.
+   Workers are full sessions, so the project's own hooks run inside each one.
+3. **Fixed: commit-gate exemptions under `diff.mnemonicPrefix`.** The secret
+   scan stripped only a `b/` prefix from diff headers, so with
+   `diff.mnemonicPrefix=true` (header `+++ i/<path>`)
+   `secret_scan_exempt_paths` never matched and denials named the wrong path.
+   It failed closed: false denies, never a missed secret. The gate now pins
+   `--no-color --no-ext-diff --src-prefix=a/ --dst-prefix=b/`. Projects
+   initialized earlier keep their stamped copy in `.claude/hooks/commit-gate.sh`
+   (`/harness-doctor` reports version drift but does not overwrite an existing
+   hook): re-copy `skills/harness-init/commit-gate.sh.template` to pick it up.
+4. **Changed (fork CI).** The `release-consistency` schedule and manual triggers
+   stay disabled (this fork cuts no `v*` tags) behind an explicit
+   `# DISABLED (` marker that names the re-enable condition; the `rc` test
+   accepts the missing triggers only with that marker.
+
 ### v6.2.1 (2026-09-17)
 
 `harness-issue-prep` was invisible to any loader that parses SKILL.md frontmatter
