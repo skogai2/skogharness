@@ -3572,6 +3572,35 @@
         "artifact": "test/run-tests.sh (rc: assertions)",
         "not_established": "Re-enabling is a manual decision once the fork tags releases"
       }
+    },
+    {
+      "assigned_to": "herdr:herdr-docs",
+      "test_file": null,
+      "discovered_via": "F122",
+      "correction_cycles": 0,
+      "qa_binding": "unit",
+      "risk": "standard",
+      "require_plan_approval": false,
+      "status": "in-progress",
+      "id": "F125",
+      "priority": 125,
+      "description": "Document herdr worker mode in the field guide and its analysis notes. F122 shipped the mode but site/ and analysis/ still describe only single-session and workflow mode. QA binding: unit (test/run-tests.sh pins) plus lead manual review of citations. AC: (1) site/parallel.html's #mode section adds a third card titled 'herdr worker mode' stating that it is opt-in, offered only when the session runs inside herdr (HERDR_ENV=1, advertised by the session-start footer), run via /vv-harness:harness-orchestrate, with one worker TUI per named herdr tab in its own herdr worktree while the lead keeps features.json, integration and the gates; the card contains an <a> link to https://herdr.dev; the card container's class may change from 'grid grid-2' to 'grid grid-3' (both defined in site/assets/site.css); (2) analysis/harness-model.md section 8 (from the line starting '## 8.' up to, not including, the line starting '## 9.', subsections included) adds a paragraph on herdr worker mode in which every factual claim cites its source file with a line range, drawn from hooks/session-start.sh, skills/harness-continue/SKILL.md, skills/harness-orchestrate/SKILL.md and skills/harness-orchestrate/references/harness-mode.md; the section heading may be renamed to name the third mode but must still start with '## 8.'; the existing stale citation 'skills/harness-continue/SKILL.md:263-268' in section 8 is corrected to the line range where that text now lives; no other existing section-8 text changes; (3) no new <script>, <link rel=stylesheet>, <img> or other resource-loading element is added to the page (a plain <a href> anchor to herdr.dev is allowed, as the page already anchors github.com and animejs.com), and the text of the existing two cards and of the 'rule people get backwards' callout is unchanged; (4) test/run-tests.sh pins that site/parallel.html contains 'harness-orchestrate' and 'HERDR_ENV', and that the section-8 slice of analysis/harness-model.md (bounds as in AC2) contains 'herdr'; (5) bash test/run-tests.sh passes.",
+      "scope": [
+        "site/parallel.html",
+        "analysis/harness-model.md",
+        "test/run-tests.sh"
+      ],
+      "depends_on": [],
+      "coverage": null,
+      "notes": "First live drill of herdr worker mode (harness-orchestrate harness-mode.md).",
+      "approaches_tried": [],
+      "spec": {
+        "verdict": "PASS",
+        "sv_version": "1.0",
+        "verified_at": "2026-11-06T00:00:00Z",
+        "source": "conversation",
+        "hash": "5294dcfec35ba3ae36fb64d0c8990fe5d1faa0fc0797b6dbfc24e33c679f7ecb"
+      }
     }
   ]
 }
