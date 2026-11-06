@@ -38,8 +38,8 @@ across workers.
      --branch "feat/<id>-<slug>" --base "$merge_base" --label "<id>" --no-focus
    ```
 
-   then create the worker's tab inside the returned worktree workspace (see
-   worktree isolation in `SKILL.md`). record the worktree workspace id in the
+   then rename the returned workspace's root tab to the worker's label and start
+   the worker in its root pane (see worktree isolation in `SKILL.md`). record the worktree workspace id in the
    registry; removal needs it. if herdr asks for repository trust, stop and ask
    the user; `--trust-repository` is never a routine retry.
 
@@ -80,9 +80,12 @@ for each worker whose report checks out, in `depends_on` order:
 3. run that feature's focused test + smoke **on the worktree branch**, then merge
    it into the integration branch.
 4. once no follow-up for that feature is pending: copy anything the registry
-   still needs from the worker's screen, retire it (`rtk herdr tab close
-   <tab_id>`), then remove the worktree before any repo-wide run:
-   `rtk herdr worktree remove --workspace <worktree_workspace_id>`.
+   still needs from the worker's screen, then retire it by removing the worktree
+   before any repo-wide run:
+   `rtk herdr worktree remove --workspace <worktree_workspace_id>`. this deletes
+   the worktree workspace with its tab and worker tui, so no separate `tab close`
+   is needed; compare `rtk herdr workspace list` before and after and confirm
+   only that workspace went away.
 5. in `features.json`: `status: "passing"`, `test_file`, `coverage`,
    `approaches_tried` (from the report), `scope_expansions`, clear `assigned_to`.
 6. mark the mirrored task complete — the TaskCompleted gate runs here.
