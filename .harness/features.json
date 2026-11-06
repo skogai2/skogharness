@@ -3479,6 +3479,99 @@
         "verified_at": "2026-08-14T12:10:00Z",
         "source": "conversation"
       }
+    },
+    {
+      "assigned_to": null,
+      "test_file": "test/run-tests.sh",
+      "correction_cycles": 0,
+      "qa_binding": "unit",
+      "risk": "standard",
+      "status": "passing",
+      "depends_on": [],
+      "spec": null,
+      "id": "F122",
+      "priority": 122,
+      "discovered_via": null,
+      "description": "herdr worker mode. AC: (1) session-start prints a herdr footer line naming the workspace only when HERDR_ENV=1, without calling the herdr CLI; (2) harness-continue Step 4 offers the mode only when that line is present and never picks it silently; (3) skills/harness-orchestrate ships with a harness-mode reference fixing batch selection, verbatim packets from description/scope/depends_on, and the standard integration order; (4) README documents the skill and the mode.",
+      "scope": [
+        "hooks/session-start.sh",
+        "skills/harness-continue/SKILL.md",
+        "skills/harness-orchestrate/",
+        "README.md",
+        "CHANGELOG.md",
+        "test/run-tests.sh"
+      ],
+      "coverage": "1821/1821 suite; 6 herdr assertions incl. a mutation-checked no-CLI guard",
+      "notes": "User-directed (2026-11-06) from the fork owner's herdr orchestration skill. No live end-to-end herdr run yet.",
+      "approaches_tried": [
+        "Env-only detection in the footer so truncation cannot drop it",
+        "Test helpers unset HERDR_ENV: the suite inherits it when run from a herdr pane"
+      ],
+      "proof": {
+        "claim": "The mode is advertised exactly when inside herdr and routes to a skill with a fixed harness binding",
+        "evidence_type": "unit",
+        "artifact": "test/run-tests.sh (herdr: assertions)",
+        "not_established": "No live herdr run with real worker tabs; whether herdr worktree remove closes a worker tab is unverified"
+      }
+    },
+    {
+      "assigned_to": null,
+      "test_file": "test/run-tests.sh",
+      "correction_cycles": 0,
+      "qa_binding": "unit",
+      "risk": "standard",
+      "status": "passing",
+      "depends_on": [],
+      "spec": null,
+      "id": "F123",
+      "priority": 123,
+      "discovered_via": "F122",
+      "description": "commit-gate must parse git diff independent of user git config. AC: (1) secret_scan_exempt_paths matches under diff.mnemonicPrefix, diff.noprefix and color.diff=always; (2) denials name the real path; (3) template and the repo's installed copy stay identical.",
+      "scope": [
+        "skills/harness-init/commit-gate.sh.template",
+        ".claude/hooks/commit-gate.sh",
+        "test/run-tests.sh"
+      ],
+      "coverage": "1821/1821 suite; regression tests force config via GIT_CONFIG_* (red before fix)",
+      "notes": "Found as the one pre-existing suite failure (cg F054) on a machine with diff.mnemonicPrefix=true.",
+      "approaches_tried": [
+        "Pinned --no-color --no-ext-diff --src-prefix=a/ --dst-prefix=b/ rather than widening the parser"
+      ],
+      "proof": {
+        "claim": "The exemption and denial path no longer depend on user diff config",
+        "evidence_type": "unit",
+        "artifact": "test/run-tests.sh (cg (diffcfg ...) assertions)",
+        "not_established": "Projects stamped earlier keep the old hook copy until re-copied"
+      }
+    },
+    {
+      "assigned_to": null,
+      "test_file": "test/run-tests.sh",
+      "correction_cycles": 0,
+      "qa_binding": "unit",
+      "risk": "standard",
+      "status": "passing",
+      "depends_on": [],
+      "spec": null,
+      "id": "F124",
+      "priority": 124,
+      "discovered_via": "F123",
+      "description": "Fork CI: release-consistency schedule/workflow_dispatch may be disabled only behind a '# DISABLED (' marker naming the re-enable condition. AC: (1) rc test passes with PyYAML and in the structural fallback with the marker; (2) both fail without it; (3) commented-out triggers never count as live.",
+      "scope": [
+        ".github/workflows/release-consistency.yml",
+        "test/run-tests.sh"
+      ],
+      "coverage": "1821/1821 with and without PyYAML; marker removal mutation fails both paths",
+      "notes": "Upstream 8dd7c26 (eovidiu-patch-1, unmerged upstream) disabled the triggers; the fork cuts no v* tags.",
+      "approaches_tried": [
+        "Kept the disable (fork has no tags) and made it explicit instead of restoring the schedule"
+      ],
+      "proof": {
+        "claim": "A silent trigger disable fails CI; a marked one with a retirement condition passes",
+        "evidence_type": "unit",
+        "artifact": "test/run-tests.sh (rc: assertions)",
+        "not_established": "Re-enabling is a manual decision once the fork tags releases"
+      }
     }
   ]
 }

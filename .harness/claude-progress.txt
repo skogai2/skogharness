@@ -1224,3 +1224,11 @@ Session 2026-08-08 (F100-F104, v5.4.0 release):
 - Gotcha worth carrying: actions/configure-pages@v5 with enablement: true DOES NOT work here. The first deploy failed with "Create Pages site failed. Error: Resource not accessible by integration" -- GITHUB_TOKEN cannot create a Pages site regardless of permissions: pages: write in the workflow. Enabling needed an admin call the owner account had to make (POST /repos/oeftimie/vv-claude-harness/pages -f build_type=workflow), after which a plain re-run of the same failed workflow succeeded. Treat enablement: true as a convenience that degrades to a manual admin step, never as a guarantee.
 - features.json deliberately untouched: this work maps to no tracked feature and was not discovered via one.
 - STILL OPEN from the prior session: SESSION_INCOMPLETE asks for a 2026-08-16 retrospective covering OVI-155. This session wrote a 2026-08-16 heading for its OWN work, which satisfies the marker literally but is different work. The OVI-155 retrospective is genuinely still missing.
+
+## Session 2026-11-06 - fork: herdr worker mode + commit-gate/CI fixes (PR skogai2/skogharness#1)
+- Features: F122 herdr worker mode, F123 commit-gate diff-format fix (discovered via F122), F124 fork release-consistency marker (discovered via F123). All passing; spec: null (not run through the spec gate).
+- Also: harness.json git_identity now points at the fork owner (Emil Skogsund <emil@skogsund.se>); the 2026-10-30 SESSION_INCOMPLETE gap was closed with a retroactive Meta-Session written from .skogai/journal.md.
+- Version: 6.3.0 (CHANGELOG entry added). Tests: 1821/1821 locally with and without PyYAML; CI test + hillclimb green on the PR.
+- Decisions: herdr mode is advertised only via the session-start footer when HERDR_ENV=1 (env-only, no CLI call); the release-consistency schedule stays disabled on the fork behind a "# DISABLED (" marker naming its re-enable condition.
+- Next: a live herdr drill of harness-orchestrate (unverified: whether `herdr worktree remove` closes a worker tab); consider upstreaming F123 to oeftimie/vv-claude-harness (F124 is fork-specific); site/ and analysis/ do not mention herdr mode yet; rename the skill in skogai2/skogai to match (`name: harness-orchestrate`).
+- Blockers: none.
