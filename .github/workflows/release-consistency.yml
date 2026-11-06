@@ -15,6 +15,10 @@ on:
   # Catches the genuine "manifest bumped, tag never cut" case (v5.2.0 shipped that
   # way and went unnoticed for months) without the push-to-main run having to
   # assert a tag that cannot exist yet.
+  # DISABLED (8dd7c26): scheduled and manual runs are off on this fork, which
+  # cuts no v* tags, so the daily tag assertion could only ever fail.
+  # Re-enable both triggers once this repository tags every plugin.json version
+  # it ships.
   # schedule:
   #  - cron: '17 6 * * *'
   # workflow_dispatch:

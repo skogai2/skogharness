@@ -10204,6 +10204,7 @@ RC_YML="$REPO_ROOT/.github/workflows/release-consistency.yml"
 if [ -f "$RC_YML" ]; then
   RC_YML_ERRORS=$(python3 - "$RC_YML" 2>&1 <<'PYEOF'
 import sys
+import re
 
 path = sys.argv[1]
 text = open(path).read()
@@ -10236,9 +10237,13 @@ try:
         }
         if not isinstance(push, dict) or not required_paths.issubset(set(push.get("paths") or [])):
             errors.append("'on.push.paths' does not cover every release-consistency input")
-        if not isinstance(on, dict) or "schedule" not in on:
+        # A deliberate disable is allowed only when the file says so AND names
+        # the event that re-enables it (AGENTS.md: a workaround must carry its
+        # retirement condition) -- never a silent comment-out.
+        disabled_marked = bool(re.search(r"(?m)^\s*# DISABLED \(", text)) and "Re-enable" in text
+        if (not isinstance(on, dict) or "schedule" not in on) and not disabled_marked:
             errors.append("'on.schedule' is missing (the bumped-but-never-tagged catch)")
-        if not isinstance(on, dict) or "workflow_dispatch" not in on:
+        if (not isinstance(on, dict) or "workflow_dispatch" not in on) and not disabled_marked:
             errors.append("'on.workflow_dispatch' is missing")
         jobs = data.get("jobs") if isinstance(data, dict) else None
         if not isinstance(jobs, dict) or not jobs:
@@ -10296,7 +10301,9 @@ except ImportError:
     ):
         if f"- '{required_path}'" not in text:
             errors.append(f"push path filter is missing {required_path} (structural check)")
-    if "schedule:" not in text:
+    live_schedule = re.search(r"(?m)^  schedule:", text)
+    marked = re.search(r"(?m)^\s*# DISABLED \(", text) and "Re-enable" in text
+    if not live_schedule and not marked:
         errors.append("no schedule trigger found (structural check)")
     if "checked_tag" not in text:
         errors.append("no checked_tag gate found (structural check)")
@@ -10346,10 +10353,13 @@ PYEOF
   fi
   # The genuine bumped-but-never-tagged case still gets caught, just not by the
   # run that structurally cannot see the tag.
-  if grep -q "schedule:" "$RC_YML" && grep -qE "tags: \['v\*'\]" "$RC_YML"; then
+  if grep -qE "^  schedule:" "$RC_YML" && grep -qE "tags: \['v\*'\]" "$RC_YML"; then
     pass "rc: the full check still runs where a tag can exist (tag push + schedule)"
+  elif grep -qE "^ *# DISABLED \(" "$RC_YML" && grep -q "Re-enable" "$RC_YML" \
+    && grep -qE "tags: \['v\*'\]" "$RC_YML"; then
+    pass "rc: schedule deliberately disabled with a stated re-enable condition; tag push still carries the tag assertion"
   else
-    fail "rc: no tag-push or schedule trigger to carry the tag assertion"
+    fail "rc: no tag-push or schedule trigger to carry the tag assertion (a disable needs '# DISABLED (' plus a Re-enable condition)"
   fi
   # Self-healing: nine issues were closed by hand on 2026-08-14 because nothing
   # in this workflow ever closed one.
