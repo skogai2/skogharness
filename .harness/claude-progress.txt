@@ -1232,3 +1232,10 @@ Session 2026-08-08 (F100-F104, v5.4.0 release):
 - Decisions: herdr mode is advertised only via the session-start footer when HERDR_ENV=1 (env-only, no CLI call); the release-consistency schedule stays disabled on the fork behind a "# DISABLED (" marker naming its re-enable condition.
 - Next: a live herdr drill of harness-orchestrate (unverified: whether `herdr worktree remove` closes a worker tab); consider upstreaming F123 to oeftimie/vv-claude-harness (F124 is fork-specific); site/ and analysis/ do not mention herdr mode yet; rename the skill in skogai2/skogai to match (`name: harness-orchestrate`).
 - Blockers: none.
+
+## Session 2026-11-06 (cont.) - F125 via herdr worker mode (first live drill)
+- Feature: F125 herdr worker mode docs (site/parallel.html third mode card; analysis/harness-model.md section 8 paragraph + stale citation fix). Passing, 1824/1824.
+- Spec: spec-verification ASK (6 wording questions) -> amended -> reverification-guard PASS; spec.hash recorded.
+- herdr registry: agent herdr-docs (unregistered: agent start timed out at 120s while the TUI worked, so addressed as pane w8R:p1), tab "claude: F125 docs", model = claude default, branch feat/F125-herdr-docs (base dfc8f7e), disposition accepted + merged (ff 93517a4), retired.
+- Drill findings: (1) `herdr worktree remove --workspace <id>` deletes the worktree workspace INCLUDING its tabs and the worker TUI, so a separate `tab close` is redundant (record the screen first). (2) worktree create already makes a root tab+pane; renaming that tab beats creating a second one. (3) the manager pane's shell may be fish: wrap commands in `bash -c`, and never `wait-output --match` on text that also appears in the echoed command line. (4) TaskCreate was not available in this session, so no mirrored task / TaskCompleted gate for F125.
+- Next: fold findings (1)-(3) into skills/harness-orchestrate (SKILL.md + references/harness-mode.md step 2/4); push + PR for F125.
