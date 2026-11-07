@@ -2,6 +2,29 @@
 
 Version history for the VV Claude Code Harness. The current version lives in `.claude-plugin/plugin.json`.
 
+### v6.3.2 (2026-11-06)
+
+`harness-orchestrate` becomes the single copy of the herdr orchestration skill
+(F126). The skogai repo's diverged `herdr-orchestration` copy is retired.
+
+1. **Changed: plan-first mechanics checked live.** `references/plan-mode.md`
+   now carries what was observed live in F003. That covers the real Claude
+   acceptance menu ("Yes, and use auto mode"), reading the full plan from
+   `$CLAUDE_CONFIG_DIR/plans/`, and Codex's plan-mode status lines. It also
+   notes that `agent_not_ready` can just mean a plan-first worker is already
+   at its menu.
+2. **Fixed: completion waits.** The plan-first hands-off wait used
+   `--until done` only, so it never caught a Codex worker settling `idle`. It
+   now uses the plain `agent wait`, which matches idle, done or blocked.
+3. **Fixed: portability.** Removed the user-local `rtk` command prefix. The
+   manager pane now splits `$HERDR_PANE_ID` instead of the focused pane.
+4. **Added: harness-mode gaps.** Packets are built in a file and passed through
+   `tr '\n' ' '`. `.claude` hooks bind only Claude workers, so the scope-diff is
+   the only check on Codex workers. Elevated features launch with
+   `--model opus`. There is now a fallback for when `TaskCreate` is unavailable.
+5. **Added:** `SKILL.md` points to `herdr --skill` for herdr's own reference
+   instead of shipping a copy that would go stale.
+
 ### v6.3.1 (2026-11-06)
 
 Corrections to herdr worker mode from its first live run (F125), plus docs.

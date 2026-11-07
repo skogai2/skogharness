@@ -16,7 +16,9 @@ run tests, and report. the controller owns assignment, state, conflict
 control, verification, integration, and the final user-facing answer. herdr is
 the substrate: each worker tui owns a named tab, and the socket cli (`herdr …`)
 gives the controller placement, input, screen reads, and native agent-status
-waits.
+waits. the installed binary is the authority on syntax: `herdr --skill` prints
+herdr's own reference for that version, and `herdr <group> <verb> --help`
+the exact flags.
 
 ## one worker, one named tab
 
@@ -42,9 +44,9 @@ own non-agent work is visible to the user. create it once per orchestration,
 with herdr's geometry rule (split a wide caller right, a narrow or tall one down):
 
 ```bash
-rtk herdr pane layout --pane "$HERDR_PANE_ID"
-rtk herdr pane split --current --direction right --cwd "$PWD" --no-focus
-rtk herdr pane run <manager_pane_id> "watch -n 10 herdr agent list"
+herdr pane layout --pane "$HERDR_PANE_ID"
+herdr pane split "$HERDR_PANE_ID" --direction right --cwd "$PWD" --no-focus
+herdr pane run <manager_pane_id> "watch -n 10 herdr agent list"
 ```
 
 record its pane id in the registry. stop the board (`pane send-keys
@@ -54,8 +56,8 @@ run those commands from a tab labeled `manager` instead. close the manager pane
 when the orchestration is complete.
 
 the manager pane runs the user's login shell, which may not be bash (fish
-rejects `$?`): wrap every command as `bash -c '…'`. when waiting on its output, match text the command prints, never
-text that also appears in the echoed command line — `pane wait-output --match
+rejects `$?`): wrap every command as `bash -c '…'`. when waiting on its output,
+match text the command prints, never text that also appears in the echoed command line — `pane wait-output --match
 DONE` returns at once on `…; echo DONE`. prefer a `--regex` on the result shape
 (`--regex "Summary: [0-9]"`).
 
@@ -78,7 +80,7 @@ while a real tui is on screen.
 headless runners — `claude -p`, `codex exec`, anything that
 streams json events into a pane — never report state, so waits never fire and
 the delegation dies silently. a worker tab filling with raw json event lines is
-a broken delegation: interrupt it (`rtk herdr pane send-keys <pane_id> ctrl+c`)
+a broken delegation: interrupt it (`herdr pane send-keys <pane_id> ctrl+c`)
 and relaunch through `agent start`.
 
 ## invariants
@@ -111,10 +113,10 @@ differ from the one the session started in.
 then inspect the daemon, integrations, and caller context:
 
 ```bash
-rtk herdr status                 # server running + socket path
-rtk herdr integration status     # selected worker runtime must show `current`
-rtk herdr pane current --current # caller pane / tab / workspace ids
-rtk herdr agent list             # agents already running
+herdr status                 # server running + socket path
+herdr integration status     # selected worker runtime must show `current`
+herdr pane current --current # caller pane / tab / workspace ids
+herdr agent list             # agents already running
 ```
 
 check/install only the integration for each selected runtime. reuse this
@@ -123,19 +125,20 @@ a new packet alone does not require repeating it.
 
 ## launch workers
 
-use each worker runtime's configured model unless the user requests an override. launch is
-two commands: create the named tab, then start the tui in that tab's root pane.
+use each worker runtime's configured model unless the user (or harness risk
+routing) requests an override; pass it as a native flag after `--` (claude
+`--model opus`, codex `--model <model>`). launch is two commands: create the named tab, then start the tui in that tab's root pane.
 
 ```bash
 # 1. named tab — returns .result.tab.tab_id and .result.root_pane.pane_id
-rtk herdr tab create --workspace "$HERDR_WORKSPACE_ID" --cwd "$PWD" \
+herdr tab create --workspace "$HERDR_WORKSPACE_ID" --cwd "$PWD" \
   --label "opus: fix loops" --no-focus
 
 # 2. worker tui in that tab's root pane; native flags follow `--`
-rtk herdr agent start fix-loops --kind claude --pane <root_pane_id> -- \
+herdr agent start fix-loops --kind claude --pane <root_pane_id> -- \
   --permission-mode auto "<packet>"
 
-rtk herdr agent start audit-auth --kind codex --pane <root_pane_id> -- \
+herdr agent start audit-auth --kind codex --pane <root_pane_id> -- \
   --approve-for-me "<packet>"
 ```
 
@@ -156,7 +159,7 @@ instead (one mode per launch; see plan-first delegation).
 
 `agent start` returns success only after herdr detects the agent ready. a
 non-zero exit is not proof the launch failed — always read the tab's root pane
-(`rtk herdr pane read <pane_id> --source visible`) and `agent list` before
+(`herdr pane read <pane_id> --source visible`) and `agent list` before
 retrying. seen live (herdr 0.9.5, 2026-11-06):
 
 - `agent_pane_busy` right after `tab create`: the tab's shell is not up yet.
@@ -165,21 +168,26 @@ retrying. seen live (herdr 0.9.5, 2026-11-06):
   `agent start`. after a timeout herdr does not register the agent name
   (`agent_not_found`), so address that worker by pane id for every `agent …`
   verb and record that in the registry.
-- `agent_not_ready` ("blocked during startup"): the tui is on a first-run
-  trust prompt. codex asks "trust this folder?" once per directory; claude
+- `agent_not_ready` ("blocked during startup"): read the screen. a plan-first
+  worker may already be at its plan acceptance menu (see
+  references/plan-mode.md); go straight to plan review. otherwise the tui is on
+  a first-run trust prompt. codex asks "trust this folder?" once per directory; claude
   asks about external CLAUDE.md imports once per project (after one answer it
   does not ask again; declined imports then silently stay off). these are
   trust decisions for the user: never answer them. notify
-  (`rtk herdr notification show "<worker> needs trust" --body "<tab label>"`),
+  (`herdr notification show "<worker> needs trust" --body "<tab label>"`),
   then re-enter `agent wait <pane_id> --until idle --until done` — a plain
   wait returns at once on the stale blocked state.
 - `invalid_agent_argument` ("cannot be encoded safely"): the packet has
-  newlines. launch packets must be a single line (`tr '\n' ' '`). confirm the
-label stuck with `rtk herdr tab list --workspace "$HERDR_WORKSPACE_ID"`; if the
+  newlines. launch packets must be a single line. build the packet in a file
+  and pass `"$(tr '\n' ' ' < packet.txt)"`, which also keeps quotes and
+  backticks in the packet away from the shell.
+
+confirm the label stuck with `herdr tab list --workspace "$HERDR_WORKSPACE_ID"`; if the
 tab shows a default label, restore it:
 
 ```bash
-rtk herdr tab rename <tab_id> "opus: fix loops"
+herdr tab rename <tab_id> "opus: fix loops"
 ```
 
 ## sending prompts to running tuis
@@ -193,7 +201,7 @@ honoring the pane's live bracketed-paste mode, and `--wait` blocks until the
 worker settles:
 
 ```bash
-rtk herdr agent prompt fix-loops "<follow-up prompt>" --wait --timeout 300000
+herdr agent prompt fix-loops "<follow-up prompt>" --wait --timeout 300000
 ```
 
 a trailing `\n` in `pane send-text` does not submit — a tui renders it as a
@@ -254,7 +262,7 @@ when workers must edit overlapping files in parallel, give each an isolated
 worktree — herdr manages them natively, as its own labeled workspace:
 
 ```bash
-rtk herdr worktree create --workspace "$HERDR_WORKSPACE_ID" \
+herdr worktree create --workspace "$HERDR_WORKSPACE_ID" \
   --branch <slug> --label "<slug>" --no-focus --json
 ```
 
@@ -266,7 +274,7 @@ instead of creating a second tab.
 `herdr worktree remove --workspace <worktree_workspace_id>` deletes the whole
 worktree workspace — its tabs and any worker tui in them, not just the checkout
 (seen live, herdr 0.9.5, 2026-11-06). so a worktree worker needs no separate
-`tab close`, but record its screen first. run `rtk herdr workspace list` before
+`tab close`, but record its screen first. run `herdr workspace list` before
 and after the remove, and confirm only that one workspace disappeared.
 
 ## track workers
@@ -277,8 +285,8 @@ status in **check-in intervals** of 3–5 minutes (sized to the slice — longer
 for heavier slices) instead of polling screens:
 
 ```bash
-rtk herdr agent wait fix-loops --timeout 300000  # check-in: returns on idle, done, or blocked
-rtk herdr pane wait-output <pane_id> --match "<text>" --timeout 300000
+herdr agent wait fix-loops --timeout 300000  # check-in: returns on idle, done, or blocked
+herdr pane wait-output <pane_id> --match "<text>" --timeout 300000
 ```
 
 controller reads never mark a tab seen, so an unfocused claude worker settles
@@ -290,10 +298,10 @@ tells which state it was. narrow with `--until done --until idle` only for a
 worker whose stale `blocked` state would return the wait at once (the
 startup-trust case in launch workers). `--timeout` is the check-in interval,
 never a deadline on the worker. on expiry, read the screen
-(`rtk herdr agent read fix-loops --source recent-unwrapped --lines 120`) and
+(`herdr agent read fix-loops --source recent-unwrapped --lines 120`) and
 re-enter the wait — loop until the worker reaches a terminal state, asks a
 question, or a stop condition fires. when a reported status looks wrong, debug
-detection with `rtk herdr agent explain <pane_id> --json`.
+detection with `herdr agent explain <pane_id> --json`.
 
 maintain a compact registry in the existing task notes or handoff: controller
 identity; worker agent name, tab label, role, model; workspace/tab/pane ids;
@@ -306,8 +314,8 @@ keep the tab label current as a slice changes, and announce milestones without
 stealing focus:
 
 ```bash
-rtk herdr tab rename <tab_id> "opus: fix loops (verifying)"
-rtk herdr notification show "workers done" --body "2/2 verified" --sound done
+herdr tab rename <tab_id> "opus: fix loops (verifying)"
+herdr notification show "workers done" --body "2/2 verified" --sound done
 ```
 
 ## verify worker output
@@ -343,7 +351,7 @@ available while reviewing or integrating its outcome when related follow-ups
 are expected. retire it once the disposition is recorded and that work is done:
 
 ```bash
-rtk herdr tab close <tab_id>
+herdr tab close <tab_id>
 ```
 
 closing the tab ends the tui session and its scrollback, so record what the
@@ -351,16 +359,16 @@ registry needs first — report text, cited line refs, command output. files,
 diffs, and worktrees survive on disk.
 
 a worker stays open while mid-run, blocked, awaiting planned integration
-follow-ups, while its screen is evidence for an unresolved failure, or when the user asks to inspect it —
-record the reason in the registry. the orchestration is complete only when
-`rtk herdr agent list` shows none of this controller's workers still running:
+follow-ups, while its screen is evidence for an unresolved failure, or when the
+user asks to inspect it — record the reason in the registry. the orchestration is complete only when
+`herdr agent list` shows none of this controller's workers still running:
 every worker retired, or its open tab justified in the registry.
 
 ## stop conditions
 
 stop and report instead of improvising when:
 
-- herdr rejects a valid workspace, tab, or pane ref, or `rtk herdr status`
+- herdr rejects a valid workspace, tab, or pane ref, or `herdr status`
   shows no running server.
 - a worker tui rejects the model alias, auth state, working directory, or a
   startup flag — report the exact blocker, and get user approval before
