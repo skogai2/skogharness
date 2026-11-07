@@ -2,6 +2,17 @@
 
 Version history for the VV Claude Code Harness. The current version lives in `.claude-plugin/plugin.json`.
 
+### v6.3.3 (2026-11-07)
+
+1. **Fixed: midnight-crossing sessions flagged incomplete (F127).** The
+   SessionEnd audit only accepted a `## Meta-Session` retrospective or a
+   `.harness/mld/` entry dated the day the session ended. A session that ran
+   past midnight, with its retrospective dated the day it started, was
+   reported as `SESSION_INCOMPLETE`. The hook now also accepts the session's
+   start date, read from the first timestamped record in the SessionEnd
+   input's `transcript_path`. If that can't be read, it falls back to the
+   previous end-date-only check.
+
 ### v6.3.2 (2026-11-06)
 
 `harness-orchestrate` becomes the single copy of the herdr orchestration skill

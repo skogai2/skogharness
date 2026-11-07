@@ -3639,6 +3639,39 @@
         "Verified flags live: claude --model, codex -m/--model, herdr worktree create --base, herdr pane split [PANE_ID]"
       ],
       "notes": "Discovered while preparing the skogai rename from the F125 handoff: the two skill copies had diverged both ways. skogai copy retired in skogai2/skogai#13."
+    },
+    {
+      "id": "F127",
+      "priority": 127,
+      "status": "passing",
+      "assigned_to": null,
+      "discovered_via": "F126",
+      "description": "session-end.sh accepts a Meta-Session retrospective and an mld entry dated the day the session STARTED, not only the day it ended (harness-improve pass 2026-11-07: the F126 session started 2026-11-06T20:35Z, ended 2026-11-07T02:05Z, had its retrospective under 2026-11-06, and was flagged SESSION_INCOMPLETE). AC: (1) the start date is read from the first timestamped record in the SessionEnd input's transcript_path; (2) a Meta-Session or mld entry dated that day satisfies the check; (3) no stdin, no transcript_path, an unreadable transcript or malformed stdin degrade to the previous end-date-only check and exit 0; (4) replaying the F126 session at 03555c7 with its real transcript writes no SESSION_INCOMPLETE; (5) bash test/run-tests.sh passes.",
+      "scope": [
+        "hooks/session-end.sh",
+        "test/run-tests.sh",
+        ".claude-plugin/plugin.json",
+        "CHANGELOG.md"
+      ],
+      "depends_on": [],
+      "test_file": "test/run-tests.sh",
+      "coverage": "1836/1836 suite (mn1-mn4, 8 new assertions; mn1 verified red against the pre-change hook)",
+      "qa_binding": "unit",
+      "risk": "standard",
+      "require_plan_approval": false,
+      "correction_cycles": 0,
+      "scope_expansions": [],
+      "approaches_tried": [
+        "Start date from the transcript's first timestamped record (first lines carry no timestamp; read capped at 500 lines), both UTC and local date, merged with the existing end dates into one SESSION_DATES list feeding both the Meta-Session and mld checks",
+        "Rejected: always accepting yesterday's date (would let a next-day session pass on the previous day's retrospective)"
+      ],
+      "proof": {
+        "claim": "a midnight-crossing session with its retrospective under its start date is not flagged",
+        "evidence_type": "unit",
+        "artifact": "test/run-tests.sh (mn1-mn4); replay of hooks/session-end.sh at 03555c7 with transcript 16acdc43: old hook wrote the gap, new hook wrote none",
+        "not_established": "behavior on a live SessionEnd after a real midnight crossing (only replayed); --resume transcripts whose first record predates the resumed session"
+      },
+      "notes": "Found via harness-continue 2026-11-07 orienting on a false SESSION_INCOMPLETE gap."
     }
   ]
 }
