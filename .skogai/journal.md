@@ -117,3 +117,57 @@ Which of these do you want, and should I commit the retrospective on a branch fi
 - Edit `.harness/context_summary.md`
 - Edit `.harness/HARNESS_BACKLOG.md`
 
+## 2026-11-07 14:09 · turn 6e30f955
+
+**User**
+
+> /vv-harness:harness-improve
+
+**Assistant**
+
+I fixed the false "incomplete session" flag on sessions that run past midnight. The fix is uncommitted on `master` and the version is bumped to 6.3.3.
+
+**What was wrong:** at session end, `hooks/session-end.sh` checks for a retrospective dated the day the session *ended*. The F126 session started on 11-06, ended on 11-07, and dated its retrospective 11-06, so it was flagged.
+
+**Fix:** the hook now also accepts the day the session *started*. It reads that from the first timestamp in the session's transcript, which Claude Code passes to the hook. The same fix covers the end-of-session log check under `.harness/mld/`. If the transcript can't be read, the hook behaves exactly as before.
+
+**Evidence:**
+- **Tests:** I added four tests. The main one failed before the change, and the full suite now passes (1836/1836).
+- **Replay of the real session:** I ran both versions of the hook on the repo as of `03555c7` with the real F126 transcript. The old hook flagged the missing 11-07 retrospective and the new one flagged nothing. It also stopped a false "no MLD entry" note. The hook takes 0.14s, well under its 1.5s limit.
+- **Recorded:** as F127 in `features.json`, with a 6.3.3 changelog entry, a result record in `context_summary.md`, and the backlog row marked promoted.
+
+**What this doesn't prove yet:**
+- It hasn't run at the end of a real session that crossed midnight; I only replayed one.
+- Your installed plugin is still 6.3.2, so the fix only applies after updating.
+- For a resumed session, the transcript may start in an earlier session, so an older retrospective date would also be accepted.
+
+**Two things to know:**
+- `HEAD` moved during this session. Commit `fabac41` ("record midnight session-end gap", authored as you at 11:03) already contains the 11-07 retrospective I wrote earlier. I didn't make that commit, so presumably your tooling did.
+- `.skogai/logs/skogai-core/log.jsonl` also shows as modified. That's your tooling's log, not mine, so I'll leave it out of any commit.
+
+Should I commit this on a feature branch and open a PR?
+
+**Actions**
+
+- Read `hooks/session-end.sh`
+- Bash: `rtk grep -n "session_id\|transcript\|SESSION_START\|\.session" hooks/session-start.sh hooks/session-end.sh | head -20; c…`
+- Read `test/run-tests.sh`
+- Read `test/run-tests.sh`
+- Bash: `F=/skogai/claude/projects/-home-skogix-skogharness/e081446c-e7cf-4d9d-b976-e27a5bd696ab.jsonl; ls -la "$F"; head -5 "$F"…`
+- Bash: `for P in /skogai/claude/projects/-home-skogix-skogharness/e081446c*.jsonl /skogai/claude/projects/-home-skogix-skogharne…`
+- Edit `test/run-tests.sh`
+- Bash: `bash test/run-tests.sh 2>&1 | grep -E "mn[0-9]|^(PASS|FAIL|Results|Total)|passed|failed" | tail -15`
+- Bash: `bash test/run-tests.sh 2>&1 | rtk grep -E "^FAIL"`
+- Edit `hooks/session-end.sh`
+- Edit `hooks/session-end.sh`
+- Bash: `bash test/run-tests.sh 2>&1 | rtk grep -E "^FAIL|^Summary"`
+- Bash: `S=/tmp/claude-1000/-home-skogix-skogharness/e081446c-e7cf-4d9d-b976-e27a5bd696ab/scratchpad; W=$S/replay; git worktree a…`
+- Bash: `git show HEAD:.harness/context_summary.md | rtk grep -n "Meta-Session 2026-11-0"; rtk git log --format='%h %ad %s' --dat…`
+- Bash: `S=/tmp/claude-1000/-home-skogix-skogharness/e081446c-e7cf-4d9d-b976-e27a5bd696ab/scratchpad; W=$S/replay; git worktree a…`
+- Bash: `rtk read CHANGELOG.md --head-lines 30; rtk grep -n '"version"' .claude-plugin/plugin.json`
+- Bash: `python3 -c "`
+- Bash: `python3 - <<'PYEOF'`
+- Edit `CHANGELOG.md`
+- Edit `.harness/HARNESS_BACKLOG.md`
+- Bash: `cat >> .harness/context_summary.md <<'EOF'`
+
