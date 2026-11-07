@@ -1066,6 +1066,56 @@ assert_rc0 "$RC" "md3: session-end exits 0 with only a stale mld entry"
 assert_contains "$OUT" "no .harness/mld/ entry found" \
   "md3: a stale (non-today) mld entry does not satisfy the discipline check"
 
+# Midnight crossing: a session that STARTED on an earlier day may carry its
+# retrospective and mld entry under its start date. The start date comes from the
+# first timestamped record in the SessionEnd input's transcript_path. 12:00Z keeps
+# the start date the same in every local timezone within +-11h.
+run_session_end_input() {
+  (cd "$1" && printf '%s' "$2" | CLAUDE_PROJECT_DIR="$1" bash "$HOOKS_DIR/session-end.sh")
+}
+DIR_MN="$WORK/session-end-midnight"
+make_fixture "$DIR_MN"
+clear_wip_gap "$DIR_MN"
+printf '\n## Meta-Session 2020-01-02 (started before midnight)\n- clean\n' \
+  >> "$DIR_MN/.harness/context_summary.md"
+mkdir -p "$DIR_MN/.harness/mld"
+printf '## Mistakes\n- none\n\n## Learnings\n- none\n\n## Desires\n- none\n' \
+  > "$DIR_MN/.harness/mld/2020-01-02-start.md"
+git -C "$DIR_MN" add -A
+git -C "$DIR_MN" commit -q -m "session work committed under the start date"
+TR_MN="$WORK/midnight-transcript.jsonl"
+printf '%s\n' '{"type":"mode"}' 'not json' \
+  '{"type":"user","timestamp":"2020-01-02T12:00:00.000Z"}' \
+  '{"type":"assistant","timestamp":"2020-01-03T12:00:00.000Z"}' > "$TR_MN"
+OUT=$(run_session_end_input "$DIR_MN" "{\"transcript_path\":\"$TR_MN\"}")
+RC=$?
+assert_rc0 "$RC" "mn1: session-end exits 0 for a midnight-crossing session"
+if [ -f "$DIR_MN/.harness/SESSION_INCOMPLETE" ]; then
+  fail "mn1: a Meta-Session dated the session's start day must satisfy the check"
+else
+  pass "mn1: a Meta-Session dated the session's start day satisfies the check"
+fi
+assert_not_contains "$OUT" "no .harness/mld/ entry found" \
+  "mn1: an mld entry dated the session's start day satisfies the mld note"
+
+OUT=$(run_session_end_input "$DIR_MN" '{}')
+RC=$?
+assert_rc0 "$RC" "mn2: session-end exits 0 with no transcript_path"
+assert_contains "$OUT" "Missing '## Meta-Session" \
+  "mn2: without a transcript, an old-dated Meta-Session still does not satisfy the check"
+
+OUT=$(run_session_end_input "$DIR_MN" "{\"transcript_path\":\"$WORK/no-such.jsonl\"}")
+RC=$?
+assert_rc0 "$RC" "mn3: session-end exits 0 with an unreadable transcript_path"
+assert_contains "$OUT" "Missing '## Meta-Session" \
+  "mn3: an unreadable transcript degrades to the end-date check"
+
+OUT=$(run_session_end_input "$DIR_MN" 'not json at all')
+RC=$?
+assert_rc0 "$RC" "mn4: session-end exits 0 on malformed stdin"
+assert_contains "$OUT" "Missing '## Meta-Session" \
+  "mn4: malformed stdin degrades to the end-date check"
+
 # F4 (simplify pass): both notes firing in the same run must each carry the shared
 # add_note() prefix, in its own consistent format -- not just one of the two.
 DIR_NOTES_BOTH="$WORK/session-end-notes-both"
