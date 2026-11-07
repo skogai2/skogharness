@@ -13219,6 +13219,25 @@ MODEL_S8=$(awk '/^## 8\./{on=1} /^## 9\./{on=0} on' "$REPO_ROOT/analysis/harness
 assert_contains "$MODEL_S8" "herdr" \
   "herdr docs: analysis/harness-model.md section 8 covers herdr worker mode"
 
+# F126: harness-orchestrate is plugin content -- no user-local wrapper, no stale name,
+# and a completion wait that matches codex's idle as well as claude's done.
+ORCH_DIR="$REPO_ROOT/skills/harness-orchestrate"
+if grep -rEq '(^|[`(;&|[:space:]])rtk[[:space:]]' "$ORCH_DIR"; then
+  fail "orchestrate: skill content must not use the user-local rtk wrapper"
+else
+  pass "orchestrate: skill commands call herdr directly, no rtk wrapper"
+fi
+if grep -rq 'herdr-orchestration' "$ORCH_DIR"; then
+  fail "orchestrate: stale herdr-orchestration name in skill content"
+else
+  pass "orchestrate: skill content uses the harness-orchestrate name"
+fi
+if grep -rEq 'agent wait [^ ]+ --until done --timeout' "$ORCH_DIR"; then
+  fail "orchestrate: a done-only wait misses codex workers that settle idle"
+else
+  pass "orchestrate: no done-only completion wait"
+fi
+
 echo ""
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo "Summary: $PASS_COUNT/$TOTAL assertions passed, $FAIL_COUNT failed"
