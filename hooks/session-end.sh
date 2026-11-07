@@ -54,8 +54,39 @@ PROOF_NOTES="${FEATURE_NOTES#*$'\x1e'}"
 
 TODAY=$(date -u +%Y-%m-%d)
 TODAY_LOCAL=$(date +%Y-%m-%d)
-MS_PATTERNS=(-e "## Meta-Session $TODAY")
-[ "$TODAY_LOCAL" != "$TODAY" ] && MS_PATTERNS+=(-e "## Meta-Session $TODAY_LOCAL")
+
+# A session that crosses midnight may date its retrospective and mld entry by the day
+# it STARTED. That day comes from the first timestamped record in the SessionEnd
+# input's transcript_path (read only up to that record). Any failure (no stdin, no
+# path, unreadable or timestamp-free transcript) yields nothing, leaving the end-date
+# check as it was.
+START_DATES=""
+if [ ! -t 0 ]; then
+  START_DATES=$(python3 -c '
+import json, sys
+from datetime import datetime
+try:
+    path = json.loads(sys.stdin.read() or "{}").get("transcript_path") or ""
+    with open(path) as fh:
+        for n, line in enumerate(fh):
+            if n >= 500:
+                break
+            try:
+                ts = json.loads(line).get("timestamp")
+            except Exception:
+                continue
+            if isinstance(ts, str) and ts:
+                t = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                print(t.date().isoformat(), t.astimezone().date().isoformat())
+                break
+except Exception:
+    pass
+' 2>/dev/null || true)
+fi
+SESSION_DATES=$(printf '%s\n' "$TODAY" "$TODAY_LOCAL" $START_DATES | awk 'NF && !seen[$0]++')
+
+MS_PATTERNS=()
+while IFS= read -r d; do MS_PATTERNS+=(-e "## Meta-Session $d"); done <<< "$SESSION_DATES"
 if ! grep -q "${MS_PATTERNS[@]}" "$H/context_summary.md" 2>/dev/null; then
   add_gap "Missing '## Meta-Session $TODAY' retrospective in context_summary.md."
 fi
@@ -79,14 +110,13 @@ fi
 MLD_DIR="$H/mld"
 MLD_FOUND=""
 if [ -d "$MLD_DIR" ]; then
-  if find "$MLD_DIR" -maxdepth 1 -name "${TODAY}-*.md" -print -quit 2>/dev/null \
-      | grep -q .; then
-    MLD_FOUND=1
-  elif [ "$TODAY_LOCAL" != "$TODAY" ] \
-      && find "$MLD_DIR" -maxdepth 1 -name "${TODAY_LOCAL}-*.md" -print -quit \
-        2>/dev/null | grep -q .; then
-    MLD_FOUND=1
-  fi
+  while IFS= read -r d; do
+    if find "$MLD_DIR" -maxdepth 1 -name "${d}-*.md" -print -quit 2>/dev/null \
+        | grep -q .; then
+      MLD_FOUND=1
+      break
+    fi
+  done <<< "$SESSION_DATES"
 fi
 if [ -z "$MLD_FOUND" ]; then
   MLD_MSG="no .harness/mld/ entry found for today ($TODAY) -- see"

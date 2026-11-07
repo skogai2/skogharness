@@ -1915,3 +1915,14 @@ session-end.sh at the next SessionStart.
 ## Meta-Session 2026-11-07 (midnight crossing; closes the SESSION_INCOMPLETE gap)
 - Scope: the 2026-11-06 F126 session ran past midnight to merge PR #4 (F126, 01:03) and PR #5 (F125, 02:00, after a master-into-branch merge 3da5d22 carrying the F126 changes). Its retrospective is the `2026-11-06 (F126)` entry above; no new work happened after midnight beyond those merges.
 - Discovered: session-end.sh checks for a Meta-Session dated the day the session ENDS (UTC and local), so any session that crosses midnight reports a gap even when its retrospective exists under the start date. Backlog row added (candidate, score 1).
+
+## Improve-Harness Result: session-end Meta-Session check on midnight-crossing sessions (2026-11-07)
+- Job contract: SessionEnd discipline audit on a session that crosses midnight; worker block unrecorded (CLI 2.1.319); accepted outcome = no gap when the retrospective is dated the start day, a real gap still fires otherwise.
+- Earliest failed handoff: Domain/authority -- hooks/session-end.sh never received the session's start date, so its accepted-date set ({end UTC, end local}) could not cover the session span. Owner: the hook.
+- Outcome: retain
+- Proof: test/run-tests.sh mn1 red before, 1836/1836 after. Replay at 03555c7 with the real F126 transcript (first ts 2026-11-06T20:35Z, last 2026-11-07T02:05Z): old hook wrote "Missing '## Meta-Session 2026-11-07'", new hook wrote no SESSION_INCOMPLETE and dropped the false missing-mld note. Hook runtime 0.14s.
+- Relay/latency: one session, hypothesis to verified replay.
+- Risk vs. carrying cost: one python3 call reading up to the first timestamped transcript line (capped at 500 lines); every failure path degrades to the old check. Relies on transcript records carrying `timestamp`.
+- Decision: retain; shipped as F127 / v6.3.3.
+- Known limits: verified by replay (recent-session inspection), not by a live SessionEnd after a real midnight crossing; the installed plugin cache only picks this up after updating to 6.3.3. A `--resume`d session's transcript may start with older records, widening the accepted dates to the original start day.
+- Gotcha: a transcript's first JSONL lines (mode, permission-mode, last-prompt) carry no timestamp; scan forward to the first record that has one.
