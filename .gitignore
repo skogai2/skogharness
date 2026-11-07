@@ -57,3 +57,4 @@ htmlcov/
 tmp/
 temp/
 *.tmp
+/.skogai/logs/skogai-core/log.jsonl

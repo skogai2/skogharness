@@ -1911,3 +1911,7 @@ session-end.sh at the next SessionStart.
 - Discovered: herdr 0.9.5 `agent wait` with no `--until` matches idle|done|blocked (per --help). That one wait covers claude (`done`), codex (`idle`) and a stuck worker; a `--until done`-only wait silently misses codex.
 - Pattern to carry: plugin content picked up user-local tooling (`rtk` prefixes) because it was written in the author's own shell. Shipped skills now have a pin against `rtk`; the same risk applies to any skill drafted from a live session.
 - Gates observed: compound-stage-and-commit false positive on `git commit -F -` again (backlog row, score 2). The user's rtk rewrite hook made auto mode return "no verdict" on most Bash calls, so each call ran twice: friction, but not a harness control.
+
+## Meta-Session 2026-11-07 (midnight crossing; closes the SESSION_INCOMPLETE gap)
+- Scope: the 2026-11-06 F126 session ran past midnight to merge PR #4 (F126, 01:03) and PR #5 (F125, 02:00, after a master-into-branch merge 3da5d22 carrying the F126 changes). Its retrospective is the `2026-11-06 (F126)` entry above; no new work happened after midnight beyond those merges.
+- Discovered: session-end.sh checks for a Meta-Session dated the day the session ENDS (UTC and local), so any session that crosses midnight reports a gap even when its retrospective exists under the start date. Backlog row added (candidate, score 1).
