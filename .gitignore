@@ -58,3 +58,4 @@ tmp/
 temp/
 *.tmp
 /.skogai/logs/skogai-core/log.jsonl
+/.skogai/logs/skogai-core/log.jsonl

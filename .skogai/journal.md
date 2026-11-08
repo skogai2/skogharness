@@ -171,3 +171,66 @@ Should I commit this on a feature branch and open a PR?
 - Edit `.harness/HARNESS_BACKLOG.md`
 - Bash: `cat >> .harness/context_summary.md <<'EOF'`
 
+## 2026-11-07 14:14 · turn 96c6634b
+
+**User**
+
+> overall please finish of this session so we can continue
+
+**Assistant**
+
+The session is wrapped up: both commits are pushed and PR #6 is open at https://github.com/skogai2/skogharness/pull/6. It is not merged.
+
+- **Commits:** the fix itself (hook, tests, version 6.3.3, changelog) is one commit, and the harness records are a separate one. The records are F127 in `features.json`, the result record, the backlog row, the handoff note in `claude-progress.txt` and this session's MLD file.
+- **Checks:** the full suite passes (1836/1836) and the smoke test is green. All the files the end-of-session check looks for are in place, so it should find no gaps.
+- **Left untouched:** `.skogai/logs/skogai-core/log.jsonl`, your tooling's log, is still uncommitted.
+
+To continue: merge PR #6, update the installed plugin to 6.3.3, then start the next session with `/vv-harness:harness-continue`. The handoff lists what's next: the commit gate wrongly blocking `git commit -F -` (seen in two sessions now), a test mode that matches CI, and offering the F123 commit-gate fix to the upstream repo.
+
+**Actions**
+
+- Write `.harness/mld/2026-11-07-e081446c-e7cf-4d9d-b976-e27a5bd696ab.md`
+- Bash: `cat >> .harness/claude-progress.txt <<'EOF'`
+- Bash: `S=/tmp/claude-1000/-home-skogix-skogharness/e081446c-e7cf-4d9d-b976-e27a5bd696ab/scratchpad`
+- Bash: `rtk git commit -q -F /tmp/claude-1000/-home-skogix-skogharness/e081446c-e7cf-4d9d-b976-e27a5bd696ab/scratchpad/msg1.txt`
+- Bash: `rtk git add .harness/features.json .harness/context_summary.md .harness/HARNESS_BACKLOG.md .harness/claude-progress.txt …`
+- Bash: `rtk git commit -q -F /tmp/claude-1000/-home-skogix-skogharness/e081446c-e7cf-4d9d-b976-e27a5bd696ab/scratchpad/msg2.txt`
+- Bash: `rtk git push -u origin fix/F127-session-end-start-date 2>&1 | tail -2; gh pr create --repo skogai2/skogharness --base ma…`
+
+## 2026-11-07 22:49 · turn fdc80e7b
+
+**User**
+
+> almost 100% certain on the commit, even though -F obviously never should be done in the first place.....
+>
+>
+> !`rtk git commit -F -`
+
+**Assistant**
+
+Not quite: `rtk` isn't what causes the `-F -` false positive. But the probe turned up something worse: any command starting with `rtk` skips the commit gate entirely.
+
+**What the gate does with each command form** (tested directly against `.claude/hooks/commit-gate.sh`):
+
+| Command | Gate |
+|---|---|
+| `git commit -F - <<EOF` (unquoted delimiter) | allowed |
+| `git commit -F - <<'EOF'` or `<<"EOF"` | **denied** as stage-and-commit |
+| `git commit -m "$(cat <<'EOF' …)"` | allowed |
+| `git add a && git commit -m x` (a real violation) | denied, correctly |
+| `rtk git add a && rtk git commit -m x` | **allowed** |
+| `rtk git commit -a -m x` | **allowed** |
+
+1. **Why the `-F -` commits got blocked:** the gate treats a quoted heredoc marker (`<<'EOF'` or `<<"EOF"`) as a file path given to `git commit`, which is how it spots staging inside a commit. An earlier fix (F109) only skips redirections written without quotes. So the problem is the quoted `'EOF'`, not `-F -` and not `rtk`. Your earlier sessions blocked because Claude Code runs the gate on the command as written, before your `rtk` hook rewrites it. I agree `-F -` shouldn't be used anyway; a message file (`-F <file>`) or `-m "$(cat <<'EOF'…)"` both pass.
+
+2. **The bigger problem: `rtk` gets past the gate.** The gate only recognizes commands that start with `git`, so `rtk git …` never reaches any of its checks. Every commit I typed with an explicit `rtk` prefix this session skipped the gate's checks. Commands your hook rewrites are probably still checked, since the gate runs on the original command, but explicit `rtk git commit` calls are not. The same is likely true of any wrapper such as `env`, `command`, `sudo` or `time` in front of `git`. That makes it a real hole in the check, not just a quirk of your setup.
+
+I'd fix both as one item for next session: make the gate see through wrapper commands like `rtk` before `git`, and treat quoted heredoc markers as redirections. That closes the existing commit-gate backlog row (score 2) with the corrected diagnosis. Should I add it to the backlog with these findings?
+
+**Actions**
+
+- Bash: `ls .claude/hooks/ skills/harness-init/ | rtk grep -i commit`
+- Bash: `S=/tmp/claude-1000/-home-skogix-skogharness/e081446c-e7cf-4d9d-b976-e27a5bd696ab/scratchpad; cat > $S/gate-probe.py <<'P…`
+- Bash: `S=/tmp/claude-1000/-home-skogix-skogharness/e081446c-e7cf-4d9d-b976-e27a5bd696ab/scratchpad; python3 - "$PWD" <<'PYEOF'`
+- Bash: `python3 - "$PWD" <<'PYEOF'`
+
