@@ -1,0 +1,11 @@
+amends "package://github.com/jdx/hk/releases/download/v2.11.1/hk@2.11.1#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v2.11.1/hk@2.11.1#/Builtins.pkl"
+// Using a coding agent? See https://hk.jdx.dev/agents
+
+local linters = new Mapping {
+    ["shellcheck"] = Builtins.shellcheck
+    ["shellharden"] = Builtins.shellharden
+    ["shfmt"] = Builtins.shfmt
+}
+
+steps = linters
